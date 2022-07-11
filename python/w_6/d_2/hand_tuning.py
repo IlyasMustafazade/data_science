@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics, model_selection, neighbors, svm
 
+from funcs import *
+
 
 def main():
     file_base = "hpt_small"

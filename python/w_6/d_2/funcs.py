@@ -1,7 +1,105 @@
+import math as math
+import warnings as warn
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
+from scipy import stats
 from sklearn import metrics, model_selection, preprocessing
+
+
+def bayesian_optimize(X, y, objective_function, model):
+    for i in range(100):
+        x = optimize_acquisition(X, y, model)
+        objective_func_vals = objective_function(
+            x, noise=0.1)
+        estimated = surrogate(model, [[x]])[0]
+        print('>x={0}, f()={1}, actual={2}'.format
+              (x, estimated[0][0], objective_func_vals))
+        X = np.vstack((X, [[x]]))
+        y = np.vstack(
+            (y, [[objective_func_vals]]))
+        model.fit(X, y)
+
+    plot_real_surrogate(X, y, model)
+    best_indices = np.argmax(y)
+    print("Best Result: x={0}, y={1}".format
+          (X[best_indices], y[best_indices]))
+
+
+def acquisition(X, X_samples, model):
+    surrogate_prediction = surrogate(model, X)
+    y_hat = surrogate_prediction[0]
+    max_y_hat = max(y_hat)
+    mean, std = surrogate(model, X_samples)
+    mean = mean[:, 0]
+    prob = stats.norm.cdf(
+        (mean - max_y_hat) / std+1E-9)
+    return prob
+
+
+def optimize_acquisition(X, y, model):
+    X_samples = np.random.random(100)
+    X_samples = np.reshape(X_samples, (-1, 1))
+    scores = acquisition(X, X_samples, model)
+    max_indices = np.argmax(scores)
+    return X_samples[max_indices, 0]
+
+
+def plot_real_surrogate(X, y, model):
+    plt.scatter(X, y)
+    X_samples = np.asarray(np.arange(0, 1, 0.001))
+    X_samples = np.reshape(X_samples, (-1, 1))
+    y_samples = surrogate(model, X_samples)[0]
+    plt.plot(X_samples, y_samples)
+
+
+def surrogate(model, X):
+    with warn.catch_warnings():
+        warn.simplefilter("ignore")
+        return model.predict(X, return_std=True)
+
+
+def get_best_params_multi_estimator(predictor_vector=None, outcome_feature=None,
+                                    algo_arr=None, param_dict_arr=None, tuner_class="grid", cv=10, n_iter=10):
+    best_hparams_arr = []
+    for i in range(len(algo_arr)):
+        algo = algo_arr[i]
+        param_dict = param_dict_arr[i]
+        best_hparams = get_best_hparams(predictor_vector, outcome_feature,
+                                        algo, param_dict, tuner_class=tuner_class, cv=cv, n_iter=n_iter)
+        best_hparams_arr.append(best_hparams)
+    return best_hparams_arr
+
+
+def get_best_hparams(predictor_vector=None, outcome_feature=None,
+                     algo=None, param_dict=None, tuner_class="grid", cv=10, n_iter=10, verbose=True):
+    if tuner_class == "grid":
+        tuner = model_selection.GridSearchCV(estimator=algo,
+                                             param_grid=param_dict, scoring="accuracy", cv=cv, n_jobs=-1,
+                                             return_train_score=True)
+    elif tuner_class == "randomized":
+        tuner = model_selection.RandomizedSearchCV(estimator=algo,
+                                                   param_distributions=param_dict,
+                                                   scoring='accuracy',
+                                                   cv=cv,
+                                                   n_iter=n_iter,
+                                                   return_train_score=True)
+    tuner.fit(
+        predictor_vector, outcome_feature)
+    best_hparams = tuner.best_params_
+    algo_name = algo.__class__.__name__
+    if verbose is True:
+        print("\nBest parameters for ", algo_name,
+              " according to ",  tuner_class, " tuner are -> \n", best_hparams)
+        print("\nCorresponding score -> ",
+              tuner.best_score_)
+        results_as_df = pd.DataFrame(
+            tuner.cv_results_)
+        print(
+            "\nResults of best scorers -> \n", results_as_df[results_as_df['rank_test_score'] == 1])
+    return best_hparams
 
 
 def train_eval_model(model, data, predictor_arr, outcome_feature, n_splits=5, verbose=True):
@@ -16,7 +114,8 @@ def train_eval_model(model, data, predictor_arr, outcome_feature, n_splits=5, ve
         hyperparameter_dict = model.get_params()
         print("\nModel hyperparameters -> \n\n",
               hyperparameter_dict)
-        print("\nPerformance metrics on training data ->")
+        print(
+            "\nPerformance metrics on training data ->")
     get_metrics(
         outcome_data, prediction, show_metrics=verbose)
     stratified_k_fold = model_selection.StratifiedKFold(
@@ -128,6 +227,21 @@ def encode_col(f_space, encode_dict=None, col_arr=None, encoder_class=None):
     return copy_f_space
 
 
+def delete_numeric_outliers(f_space, col_arr, stddev_limit=3):
+
+    remove_indices = []
+    for column_name in f_space:
+        bool_arr = np.abs(stats.zscore(
+            f_space[column_name])) > stddev_limit
+        bool_arr = np.array(bool_arr)
+        for j in range(len(bool_arr)):
+            if bool_arr[j]:
+                remove_indices.append(j)
+    remove_indices = list(set(remove_indices))
+    remove_indices = np.array(remove_indices)
+    return f_space.drop(f_space.index[remove_indices])
+
+
 def col_to_df(df, name, sub_df):
     new_df = df
     df_columns = df.columns
@@ -165,9 +279,11 @@ def vis_missing(f_space):
     n_row = f_space.shape[0]
     print("\nTotal percentage of missing values -> ",
           missing_val_series.sum() / n_row * 100)
-    print("\nCounts of missing values per columns ->\n")
+    print(
+        "\nCounts of missing values per columns ->\n")
     print(missing_val_series)
-    print("\nPercentages of missing values per columns ->\n")
+    print(
+        "\nPercentages of missing values per columns ->\n")
     print(missing_val_series / n_row * 100)
 
 
@@ -184,13 +300,27 @@ def std_fillna(f_space):
     return f_space.fillna(na_dict)
 
 
+def small_increment(arr, increment_val=1):
+    return arr + increment_val
+
+
+def remove_rows_with_val(f_space=None, col_arr=None, val=None):
+    copy_f_space = f_space
+    for column_name in col_arr:
+        boolean_mask = copy_f_space[column_name] != val
+        copy_f_space = copy_f_space[boolean_mask]
+    return copy_f_space
+
+
 def merge_columns(f_space, column_pair_arr, new_name, method=np.sum):
     copy_f_space = f_space
     first = column_pair_arr[0]
     second = column_pair_arr[1]
     copy_f_space[first] += copy_f_space[second]
-    copy_f_space = copy_f_space.rename(columns={first: new_name})
-    copy_f_space = copy_f_space.drop(labels=second, axis=1)
+    copy_f_space = copy_f_space.rename(
+        columns={first: new_name})
+    copy_f_space = copy_f_space.drop(
+        labels=second, axis=1)
     return copy_f_space
 
 
@@ -226,25 +356,30 @@ def normalize(f_space, col_arr):
     copy_f_space = f_space
     for i in col_arr:
         elem = f_space[i]
-        copy_f_space[i] = (elem - elem.mean()) / elem.std()
+        copy_f_space[i] = (
+            elem - elem.mean()) / elem.std()
     return copy_f_space
 
 
 def plot_col_freq(f_space):
     f_space_values = np.array(f_space.values)
-    f_space_values_shape = np.array(f_space_values.shape)
-    col_arr = np.reshape(f_space_values, f_space_values_shape)
+    f_space_values_shape = np.array(
+        f_space_values.shape)
+    col_arr = np.reshape(
+        f_space_values, f_space_values_shape)
     col_arr = col_arr.T
     last_col = col_arr[-1]
     col_arr = col_arr[:-1]
     col_names = f_space.columns
     last_name = col_names[-1]
-    plt.figure(num=last_name, figsize=[12.8, 12.8])
+    plt.figure(num=last_name,
+               figsize=[12.8, 12.8])
     sns.histplot(y=last_name, data=f_space)
     for index, elem in enumerate(col_arr):
         col_name = col_names[index]
         col = f_space[col_name]
-        plt.figure(num=col_name, figsize=[12.8, 12.8])
+        plt.figure(
+            num=col_name, figsize=[12.8, 12.8])
         sns.histplot(y=col_name, hue=last_name,
                      multiple="stack", data=f_space, kde=True)
 
