@@ -21,8 +21,10 @@ def main():
     f_space = std_fillna(f_space)
     f_space = merge_columns(f_space, ("ApplicantIncome", "CoapplicantIncome"),
                             "TotalIncome", method=np.sum)
-    to_apply_transform = np.array(["TotalIncome", "LoanAmount"])
-    f_space = apply_transform(f_space, to_apply_transform)
+    to_apply_transform = np.array(
+        ["TotalIncome", "LoanAmount"])
+    f_space = apply_transform(
+        f_space, to_apply_transform)
     to_normalize = np.array(
         ["TotalIncome", "LoanAmount", "Loan_Amount_Term"])
     f_space = normalize(f_space, to_normalize)

@@ -16,7 +16,8 @@ def main():
     for i in np.array(f_space.columns[1:]):
         if not (f_space[i] == 0).any():
             f_space = apply_transform(f_space, i)
-    f_space = normalize(f_space, np.array(f_space.columns[1:]))
+    f_space = normalize(
+        f_space, np.array(f_space.columns[1:]))
     voting_style = "hard"
     voting_ensemble = ensemble.VotingClassifier(estimators=[
         ("logistic_cl", linear_model.LogisticRegression(

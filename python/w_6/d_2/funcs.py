@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import skopt as skopt
 from scipy import stats
 from sklearn import metrics, model_selection, preprocessing
 
@@ -86,6 +87,9 @@ def get_best_hparams(predictor_vector=None, outcome_feature=None,
                                                    cv=cv,
                                                    n_iter=n_iter,
                                                    return_train_score=True)
+    elif tuner_class == "bayesian":
+        tuner = skopt.BayesSearchCV(estimator=algo, search_spaces=param_dict, scoring="accuracy",
+                                    cv=cv, n_jobs=-1, return_train_score=True)
     tuner.fit(
         predictor_vector, outcome_feature)
     best_hparams = tuner.best_params_
@@ -190,7 +194,7 @@ def get_metrics(outcome_data, prediction, show_metrics=False):
     return as_tuple
 
 
-def encode_col(f_space, encode_dict=None, col_arr=None, encoder_class=None):
+def encode_col(f_space=None, encode_dict=None, col_arr=None, encoder_class=None):
     col_arr_ = []
     if (encode_dict is None) and (col_arr is None) and (encoder_class is None):
         return f_space
