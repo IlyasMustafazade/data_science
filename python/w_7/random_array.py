@@ -10,13 +10,10 @@ class RandomArray():
         self._range_ = range_
         self._len_ = len_
 
-    def get_random_array(self, verbose="silent"):
+    def get_random_array(self):
         random_array = np.zeros(
             shape=(self._len_,), dtype="int64")
         for i in range(self._len_):
             random_array[i] = random.randint(
                 *self._range_)
-        if verbose == "debug":
-            print("\nGenerated random array -> \n\n",
-                  random_array, "\n")
         return random_array

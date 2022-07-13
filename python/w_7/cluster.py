@@ -1,5 +1,7 @@
 import numpy as np
 
+import euclidean_distance
+
 
 class Cluster():
     def __init__(self, point_arr=None):
@@ -66,6 +68,17 @@ class Cluster():
             observation_arr[index_observation_arr] = observation_set[index]
             index_observation_arr += 1
         return observation_arr
+
+    def get_inertia(self):
+        inertia = 0
+        for point in self._point_arr:
+            observation = point.get_observation()
+            dist_obj = euclidean_distance.EuclideanDistance(
+                object_a=observation, object_b=self._center_point)
+            dist = dist_obj.get_distance()
+            dist_sq = dist * dist
+            inertia += dist_sq
+        return inertia
 
     def add_point(self, point_obj=None):
         self._point_arr = np.append(

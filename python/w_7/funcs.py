@@ -10,6 +10,33 @@ from scipy import stats
 from sklearn import metrics, model_selection, preprocessing
 
 
+def clustering_results(n_clusters=None, clusterer=None,
+                       clusterer_name=None, observation_set=None, column=None):
+    cluster_arr = [[] for i in range(n_clusters)]
+    label_index = 0
+    clusterer_labels = clusterer.labels_
+    for label in clusterer.labels_:
+        cluster_arr[label].append(label_index)
+        label_index += 1
+    for i in range(n_clusters):
+        print("\nCluster", str(i), "-> ",
+              column[cluster_arr[i]])
+    plt.figure(num=clusterer_name)
+    for cluster_ in cluster_arr:
+        x_vals = []
+        y_vals = []
+        for index in cluster_:
+            x_vals.append(
+                observation_set[index][0])
+            y_vals.append(
+                observation_set[index][1])
+        plt.scatter(x_vals, y_vals)
+    print("\n", clusterer_name, "'s silhouette score -> ",
+          metrics.silhouette_score(observation_set, clusterer_labels), "\n")
+    print("\n", clusterer_name, "'s CH score -> ",
+          metrics.calinski_harabasz_score(observation_set, clusterer_labels), "\n")
+
+
 def bayesian_optimize(X, y, objective_function, model):
     for i in range(100):
         x = optimize_acquisition(X, y, model)
@@ -232,7 +259,6 @@ def encode_col(f_space=None, encode_dict=None, col_arr=None, encoder_class=None)
 
 
 def delete_numeric_outliers(f_space, col_arr, stddev_limit=3):
-
     remove_indices = []
     for column_name in f_space:
         bool_arr = np.abs(stats.zscore(
@@ -276,7 +302,7 @@ def col_to_df(df, name, sub_df):
     return new_df
 
 
-def vis_missing(f_space):
+def vis_missing(f_space=None):
     plt.figure(num="Missing values heatmap")
     sns.heatmap(f_space.isna())
     missing_val_series = f_space.isna().sum()
@@ -356,7 +382,7 @@ def encode_binary_col(f_space):
     return copy_f_space
 
 
-def normalize(f_space, col_arr):
+def normalize(f_space=None, col_arr=None):
     copy_f_space = f_space
     for i in col_arr:
         elem = f_space[i]

@@ -1,14 +1,17 @@
 import numpy as np
 
+import base_estimator
 import cluster
 import distance
+import distance_chooser
 import euclidean_distance
 import point
+import point_array_extractor
 import random_array
 import rectilinear_distance
 
 
-class KMeans():
+class KMeans(base_estimator.BaseEstimator):
     def __init__(
             self,
             observation_set=None,
@@ -26,10 +29,15 @@ class KMeans():
         self._validate_n_clusters()
         self._n_dimensions = self._observation_set_shape[1]
         self._verbose = verbose
-        self._distance_metric = self._set_distance_metric(
-            distance_metric)
+        self._distance_metric = distance_chooser.DistanceChooser.choose_distance_metric(
+            distance_metric_as_str=distance_metric)
         self._cluster_dict = {}
         self._max_iter = max_iter
+        point_extractor = point_array_extractor.PointArrayExtractor()
+        self._point_obj_arr = point_extractor.extract_point_arr(
+            self._observation_set)
+        self.inertia_ = 0
+        self.labels_ = None
 
     def _validate_observation_set(self):
         desired_dim = 2
@@ -43,18 +51,9 @@ class KMeans():
             raise Exception(
                 "Number of clusters must be less than number of points")
 
-    def _set_distance_metric(self, distance_metric):
-        if distance_metric == "euclidean":
-            return euclidean_distance.EuclideanDistance
-        elif distance_metric == "rectilinear":
-            return rectilinear_distance.RectilinearDistance
-        else:
-            raise Exception(
-                "Unknown distance metric")
-
     def _choose_initial_centers(self):
         random_array_obj = random_array.RandomArray(
-            range_=(0, self._n_points), len_=self._n_clusters)
+            range_=(0, self._n_points-1), len_=self._n_clusters)
         random_arr = random_array_obj.get_random_array()
         center_dict = {}
         key = 0
@@ -86,31 +85,56 @@ class KMeans():
         min_index = min_index[0][0]
         return min_index
 
+    def _set_inertia(self):
+        inertia = 0
+        cluster_arr = list(
+            self._cluster_dict.values())
+        cluster_arr = np.array(cluster_arr)
+        for cluster_obj in cluster_arr:
+            cluster_inertia = cluster_obj.get_inertia()
+            inertia += cluster_inertia
+        self.inertia_ = inertia
+
+    def _set_labels(self):
+        labels = []
+        for point_obj in self._point_obj_arr:
+            cluster_number = point_obj.get_cluster_number()
+            labels.append(cluster_number)
+        labels = np.array(labels)
+        self.labels_ = labels
+
     def get_observation_set(self):
         return self._observation_set
 
     def get_n_clusters(self):
         return self._n_clusters
 
-    def _initialize_point_arr(self):
-        point_obj_arr = np.empty(
-            shape=(self._n_points,), dtype=object)
-        index_to_add_point_obj = 0
-        for index, observation in enumerate(self._observation_set):
-            point_obj = point.Point(
-                observation=observation, observation_index=index)
-            point_obj_arr[index_to_add_point_obj] = point_obj
-            index_to_add_point_obj += 1
-        return point_obj_arr
+    def get_cluster_dict(self):
+        return self._cluster_dict
+
+    def get_point_obj_arr(self):
+        return self._point_obj_arr
+
+    def get_flattened_cluster_dict(self):
+        flattened_dict = {}
+        for cluster_index, cluster_obj in self._cluster_dict.items():
+            point_arr = cluster_obj.get_point_arr()
+            index_arr = [point_obj.get_observation_index(
+            ) for point_obj in point_arr]
+            index_arr = np.array(index_arr)
+            flattened_dict[cluster_index] = index_arr
+        return flattened_dict
+
+    def set_n_clusters(self, n_clusters=None):
+        self._n_clusters = n_clusters
 
     def fit(self):
         self._cluster_dict = self._choose_initial_centers()
-        point_obj_arr = self._initialize_point_arr()
         cluster_numbers_change = True
         n_iter = 0
         while cluster_numbers_change is True and n_iter <= self._max_iter:
             cluster_numbers_change = False
-            for point_obj in point_obj_arr:
+            for point_obj in self._point_obj_arr:
                 cluster_number = point_obj.get_cluster_number()
                 cluster_index_to_add = self._compute_closest_cluster_index(point_obj=point_obj,
                                                                            cluster_dict=self._cluster_dict)
@@ -124,3 +148,5 @@ class KMeans():
                         cluster_number=cluster_index_to_add)
                     cluster_numbers_change = True
             n_iter += 1
+        self._set_inertia()
+        self._set_labels()
