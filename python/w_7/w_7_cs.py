@@ -4,7 +4,8 @@ import pandas as pd
 import sklearn.cluster as skl_cluster
 from sklearn import decomposition
 
-import elbow
+import cluster_reporter
+import dendrogram
 import kmeans
 import point_array_extractor
 import silhouette
@@ -53,8 +54,8 @@ def main():
           s_score, "\n")
     print("\nCH score -> ",
           metrics.calinski_harabasz_score(observation_set, my_kmeans_clusterer.labels_), "\n")
-    clustering_results(n_clusters=n_clusters, clusterer=kmeans_clusterer,
-                       clusterer_name="Sklearn KMeans", observation_set=observation_set, column=country_arr)
+    cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=kmeans_clusterer,
+                                            clusterer_name="Sklearn KMeans", observation_set=observation_set, column=country_arr)
     plt.figure(num="Kmeans clustering")
     for cluster_number, cluster_object in cluster_dict.items():
         observation_arr = cluster_object.get_observation_arr(
@@ -67,10 +68,12 @@ def main():
         plt.scatter(x_vals, y_vals)
     # HIERARCHICAL CLUSTERING WITH PCA
     hierarchical_clusterer = skl_cluster.AgglomerativeClustering(
-        n_clusters=n_clusters)
+        n_clusters=n_clusters, distance_threshold=None, compute_distances=True)
     hierarchical_clusterer.fit(observation_set)
-    clustering_results(n_clusters=n_clusters, clusterer=hierarchical_clusterer,
-                       clusterer_name="Hierarchical", observation_set=observation_set, column=country_arr)
+    cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=hierarchical_clusterer,
+                                            clusterer_name="Hierarchical", observation_set=observation_set, column=country_arr)
+    dendrogram.Dendrogram.plot_dendrogram(
+        model=hierarchical_clusterer, truncate_mode="level", p=3)
     plt.show()
 
 
