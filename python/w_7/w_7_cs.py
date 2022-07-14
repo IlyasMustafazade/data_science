@@ -43,12 +43,14 @@ def main():
     cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=my_kmeans_clusterer,
                                             clusterer_name="Sklearn KMeans",
                                             observation_set=observation_set,
-                                            column=country_arr, distance_metric=distance_metric)
+                                            column=country_arr, distance_metric=distance_metric,
+                                            ground_truth_exists=False)
     cluster_reporter.ClusterReporter.report_skl(n_clusters=n_clusters, clusterer=kmeans_clusterer,
                                                 clusterer_name="Sklearn KMeans",
                                                 observation_set=observation_set,
-                                                column=country_arr)
-    # HIERARCHICAL CLUSTERING WITH PCA
+                                                column=country_arr,
+                                                ground_truth_exists=False)
+    # HIERARCHICAL CLUSTERING WITH PCAsss
     hierarchical_clusterer = skl_cluster.AgglomerativeClustering(
         n_clusters=n_clusters, distance_threshold=None, compute_distances=True)
     hierarchical_clusterer.fit(observation_set)

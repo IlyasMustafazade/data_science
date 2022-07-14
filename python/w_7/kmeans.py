@@ -18,7 +18,6 @@ class KMeans(base_estimator.BaseEstimator):
             n_clusters=8,
             distance_metric="euclidean",
             max_iter=300,
-            verbose=False
     ):
         self._observation_set = observation_set
         self._validate_observation_set()
@@ -28,7 +27,6 @@ class KMeans(base_estimator.BaseEstimator):
         self._n_points = self._observation_set_shape[0]
         self._validate_n_clusters()
         self._n_dimensions = self._observation_set_shape[1]
-        self._verbose = verbose
         self._distance_metric = distance_chooser.DistanceChooser.choose_distance_metric(
             distance_metric_as_str=distance_metric)
         self._cluster_dict = {}

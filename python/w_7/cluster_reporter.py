@@ -7,7 +7,8 @@ import silhouette
 class ClusterReporter():
     @staticmethod
     def report_skl(n_clusters=None, clusterer=None,
-                   clusterer_name=None, observation_set=None, column=None):
+                   clusterer_name=None, observation_set=None,
+                   column=None, ground_truth_exists=False):
         cluster_arr = [[]
                        for i in range(n_clusters)]
         label_index = 0
@@ -32,12 +33,17 @@ class ClusterReporter():
               metrics.silhouette_score(observation_set, clusterer_labels), "\n")
         print("\n", clusterer_name, "'s CH score -> ",
               metrics.calinski_harabasz_score(observation_set, clusterer_labels), "\n")
+        if ground_truth_exists is True:
+            print("\nFowlkes-Mallows score -> ",
+                  metrics.fowlkes_mallows_score(column, clusterer_labels))
 
     @staticmethod
     def report(n_clusters=None, clusterer=None,
-               clusterer_name=None, observation_set=None, column=None, distance_metric=None):
+               clusterer_name=None, observation_set=None, column=None,
+               distance_metric=None, ground_truth_exists=False):
         flattened_cluster_dict = clusterer.get_flattened_cluster_dict()
         cluster_dict = clusterer.get_cluster_dict()
+        clusterer_labels = clusterer.labels_
         for i in range(n_clusters):
             print("\nCluster", str(i), "-> ",
                   column[flattened_cluster_dict[i]])
@@ -49,7 +55,10 @@ class ClusterReporter():
               s_score, "\n")
         print("\nCH score -> ",
               metrics.calinski_harabasz_score(observation_set,
-                                              clusterer.labels_), "\n")
+                                              clusterer_labels), "\n")
+        if ground_truth_exists is True:
+            print("\nFowlkes-Mallows score -> ",
+                  metrics.fowlkes_mallows_score(column, clusterer_labels))
         plt.figure(num="Kmeans clustering")
         for cluster_number, cluster_object in cluster_dict.items():
             observation_arr = cluster_object.get_observation_arr(
