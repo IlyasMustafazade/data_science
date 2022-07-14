@@ -136,8 +136,10 @@ class KMeans(base_estimator.BaseEstimator):
             cluster_numbers_change = False
             for point_obj in self._point_obj_arr:
                 cluster_number = point_obj.get_cluster_number()
-                cluster_index_to_add = self._compute_closest_cluster_index(point_obj=point_obj,
-                                                                           cluster_dict=self._cluster_dict)
+                cluster_index_to_add = \
+                    self._compute_closest_cluster_index(
+                        point_obj=point_obj,
+                        cluster_dict=self._cluster_dict)
                 if cluster_number != cluster_index_to_add:
                     self._cluster_dict[cluster_index_to_add].add_point(
                         point_obj=point_obj)

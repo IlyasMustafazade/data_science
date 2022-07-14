@@ -40,38 +40,20 @@ def main():
         n_clusters=n_clusters)
     my_kmeans_clusterer.fit()
     kmeans_clusterer.fit(observation_set)
-    flattened_cluster_dict = my_kmeans_clusterer.get_flattened_cluster_dict()
-    cluster_dict = my_kmeans_clusterer.get_cluster_dict()
-    for i in range(n_clusters):
-        print("\nCluster", str(i), "-> ",
-              country_arr[flattened_cluster_dict[i]])
-    kmeans_clusterer_labels_ = kmeans_clusterer.labels_
-    silhouetter = silhouette.Silhouette(
-        point_arr=my_kmeans_clusterer.get_point_obj_arr(),
-        cluster_dict=cluster_dict, distance_metric=distance_metric)
-    s_score = silhouetter.silhouette_score()
-    print("\nSilhouette score -> ",
-          s_score, "\n")
-    print("\nCH score -> ",
-          metrics.calinski_harabasz_score(observation_set, my_kmeans_clusterer.labels_), "\n")
-    cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=kmeans_clusterer,
-                                            clusterer_name="Sklearn KMeans", observation_set=observation_set, column=country_arr)
-    plt.figure(num="Kmeans clustering")
-    for cluster_number, cluster_object in cluster_dict.items():
-        observation_arr = cluster_object.get_observation_arr(
-            observation_set=observation_set)
-        x_vals = []
-        y_vals = []
-        for observation in observation_arr:
-            x_vals.append(observation[0])
-            y_vals.append(observation[1])
-        plt.scatter(x_vals, y_vals)
+    cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=my_kmeans_clusterer,
+                                            clusterer_name="Sklearn KMeans",
+                                            observation_set=observation_set,
+                                            column=country_arr, distance_metric=distance_metric)
+    cluster_reporter.ClusterReporter.report_skl(n_clusters=n_clusters, clusterer=kmeans_clusterer,
+                                                clusterer_name="Sklearn KMeans",
+                                                observation_set=observation_set,
+                                                column=country_arr)
     # HIERARCHICAL CLUSTERING WITH PCA
     hierarchical_clusterer = skl_cluster.AgglomerativeClustering(
         n_clusters=n_clusters, distance_threshold=None, compute_distances=True)
     hierarchical_clusterer.fit(observation_set)
-    cluster_reporter.ClusterReporter.report(n_clusters=n_clusters, clusterer=hierarchical_clusterer,
-                                            clusterer_name="Hierarchical", observation_set=observation_set, column=country_arr)
+    cluster_reporter.ClusterReporter.report_skl(n_clusters=n_clusters, clusterer=hierarchical_clusterer,
+                                                clusterer_name="Hierarchical", observation_set=observation_set, column=country_arr)
     dendrogram.Dendrogram.plot_dendrogram(
         model=hierarchical_clusterer, truncate_mode="level", p=3)
     plt.show()
