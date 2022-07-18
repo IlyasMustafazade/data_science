@@ -1,33 +1,38 @@
 import re
-
+import sys
 import category_encoders as ce
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from imblearn import over_sampling
-from sklearn import (compose, ensemble, impute, metrics, model_selection,
+from sklearn import (compose, ensemble, impute,
+                     metrics, model_selection,
                      pipeline, preprocessing)
 
 
 def main():
-    file_obj = "income_evaluation"
+    file_name = "income_evaluation"
     file_ext = ".csv"
-    full_name = file_obj + file_ext
-    df = pd.read_csv(full_name)
+    file_name_ext = file_name + file_ext
+
+    to_drop_col_name_arr = np.array(
+        ["capital-gain", "capital-loss",
+        "education", "fnlwgt", "native-country"]
+        )
+
+    df = pd.read_csv(file_name_ext)
     df = df.rename(str.strip, axis="columns")
-    bad_columns = np.array([
-        "capital-gain", "capital-loss", "education", "fnlwgt", "native-country"])
-    df = df.drop(labels=bad_columns, axis=1)
+    df = df.drop(
+        labels=to_drop_col_name_arr, axis=1)
     df = df.replace(to_replace=re.compile(
         r" \?"), value=np.nan, regex=True)
     df = df.dropna()
 
-    cont_cols = ["age", "hours-per-week"]
-    binary_cols = ["workclass",
+    cont_col_name_arr = ["age", "hours-per-week"]
+    binary_col_name_arr = ["workclass",
                    "marital-status", "occupation", "relationship", "race"]
-    ordinal_cols = [
+    ordinal_col_name_arr = [
         "education-num", "sex", "income"]
-    df_columns = df.columns
+    df_col_name_arr = df.columns
 
     log_transformer = preprocessing.FunctionTransformer(
         func=np.log10)
@@ -39,39 +44,45 @@ def main():
         ce.BinaryEncoder())
     ordinal_pipe = pipeline.make_pipeline(
         ce.OrdinalEncoder())
-
     col_transformer = compose.make_column_transformer(
         (cont_pipe,
-         cont_cols), (binary_pipe, binary_cols),
-        (ordinal_pipe, ordinal_cols)
+         cont_col_name_arr), (binary_pipe, binary_col_name_arr),
+        (ordinal_pipe, ordinal_col_name_arr)
     )
+    over_sampler = over_sampling.SMOTE()
+    
     col_transformer.fit(df)
-    df = col_transformer.transform(df)
-    matrix = df
+    matrix = col_transformer.transform(df)
 
-    sampler = over_sampling.SMOTE()
-
-    m, n = np.shape(matrix)
-    X = np.zeros(shape=(m, n-1))
-    y = np.zeros(shape=(m,))
-    for index, row_vector in enumerate(matrix):
-        X[index] = row_vector[:-1]
-        y[index] = row_vector[-1] - 1
-
-    X, y = sampler.fit_resample(X, y)
+    X, y = extract_X_y(matrix=matrix)
+    X, y = over_sampler.fit_resample(X, y)
 
     test_size = 0.2
     X_train, X_test, y_train, y_test = model_selection.train_test_split(
         X, y, test_size=test_size)
+
     random_forest_cl = ensemble.RandomForestClassifier()
     random_forest_cl.fit(X_train, y_train)
     y_hat = random_forest_cl.predict(X_test)
+
+    name_metric_dict = make_name_metric_dict(
+        y=y_test, y_hat=y_hat)
     with open("w8_hw.txt", "w") as f:
-        comp_metrics(
-            y=y_test, y_hat=y_hat, file_obj=f)
+        report_metric_data(
+            name_metric_dict=name_metric_dict, file_obj=f)
 
 
-def comp_metrics(y=None, y_hat=None, file_obj=None, show_metrics=True):
+def extract_X_y(matrix=None):
+    m, n = np.shape(matrix)
+    X = np.empty(shape=(m, n-1))
+    y = np.empty(shape=(m,))
+    for idx, row_vector in enumerate(matrix):
+        X[idx] = row_vector[:-1]
+        y[idx] = row_vector[-1]
+    return X, y
+
+
+def make_name_metric_dict(y=None, y_hat=None):
     accuracy = metrics.accuracy_score(
         y, y_hat)
     f1_score = metrics.f1_score(
@@ -85,14 +96,18 @@ def comp_metrics(y=None, y_hat=None, file_obj=None, show_metrics=True):
     roc_auc_score = metrics.roc_auc_score(
         y, y_hat)
     name_metric_dict = {"Accuracy score": accuracy, "F1 score": f1_score,
-                        "F2 score": f2_score, "Confusion matrix": conf_matrix,
-                        "Classification report": cl_report, "ROC-AUC score": roc_auc_score}
-    if show_metrics is True:
-        for name, metric in name_metric_dict.items():
-            print("\n", name, "->\n\n",
-                  metric, file=file_obj)
-    as_tuple = tuple(name_metric_dict.values())
-    return as_tuple
+                        "F2 score": f2_score,
+                        "Confusion matrix": conf_matrix,
+                        "Classification report": cl_report,
+                        "ROC-AUC score": roc_auc_score}
+    return name_metric_dict
+
+
+def report_metric_data(name_metric_dict=None, file_obj=None):
+    item_lst = name_metric_dict.items()
+    for name, metric in item_lst:
+        print("\n", name, "->\n\n",
+              metric, file=file_obj)
 
 
 if __name__ == "__main__":
