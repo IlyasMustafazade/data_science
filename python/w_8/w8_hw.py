@@ -54,7 +54,8 @@ def main():
     col_transformer.fit(df)
     matrix = col_transformer.transform(df)
 
-    X, y = extract_X_y(matrix=matrix)
+    X = matrix[:, :-1]
+    y = matrix[:, -1]
     X, y = over_sampler.fit_resample(X, y)
 
     test_size = 0.2
@@ -70,16 +71,6 @@ def main():
     with open("w8_hw.txt", "w") as f:
         report_metric_data(
             name_metric_dict=name_metric_dict, file_obj=f)
-
-
-def extract_X_y(matrix=None):
-    m, n = np.shape(matrix)
-    X = np.empty(shape=(m, n-1))
-    y = np.empty(shape=(m,))
-    for idx, row_vector in enumerate(matrix):
-        X[idx] = row_vector[:-1]
-        y[idx] = row_vector[-1]
-    return X, y
 
 
 def make_name_metric_dict(y=None, y_hat=None):
