@@ -1,6 +1,6 @@
-# data-science
+# Data science internship
 
-Everything related to data science
+Code related to Data science internship
 
 
 
