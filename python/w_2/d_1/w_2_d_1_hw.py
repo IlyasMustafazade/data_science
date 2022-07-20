@@ -4,7 +4,20 @@ def main(): pass
 
 # 1
 
-def match_vowel(str_): return re.match(r'\w*[aeiou]{1,}\w*', str_)
+def match_vowel_inside(str_):
+    # [bcdfghjklmnpqrstvwxyz] -> match consonant
+    # {1,} -> at least one in front of word
+    # [aeiou] -> match vowel
+    # {1,} -> can be multiple
+    # \w* -> after matching, pass over 0 or more alpha num chars
+    # because \w+ does not match "cec" but should match it
+    # [bcdfghjklmnpqrstvwxyz]{1}\b ->
+    #     match 1 consonant at last character of first word
+    pattern = \
+        re.compile(
+        r"[bcdfghjklmnpqrstvwxyz]{1,}[aeiou]{1,}\w*[bcdfghjklmnpqrstvwxyz]{1}\b"
+        )
+    return re.match(pattern, str_)
 
 # 2
 
